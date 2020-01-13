@@ -96,34 +96,49 @@ func (c *lightWeightClient) do(req *http.Request, ptrToReturnObj interface{}) er
 		},
 	}
 
-	// Execute it.
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
+	haveTriedOrigToken := false
+	haveTriedNewToken := false
+	for !haveTriedOrigToken || !haveTriedNewToken {
+		// Execute it.
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		if !haveTriedOrigToken {
+			haveTriedOrigToken = true
+		} else {
+			haveTriedNewToken = true
+		}
 
-	// Check for success.
-	// Note - someday we may want to implement retrying and exponential backoff with jitter
-	// here, but on the first iteration we're going with a naive approach because we don't
-	// know whether it'll be needed.
-	switch resp.StatusCode {
-	case 200, 201, 202:
-		// Pass.
-	case 404:
-		return ErrNotFound
-	default:
-		return fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, resp))
-	}
+		// Check for success.
+		switch resp.StatusCode {
+		case 200, 201, 202:
+			// Pass.
+		case 401, 403:
+			// Perhaps the token from our bearer token file has been refreshed.
+			config, err := inClusterConfig()
+			if err != nil {
+				return err
+			}
+			c.config = config
+			// Continue to try again.
+			continue
+		case 404:
+			return ErrNotFound
+		default:
+			return fmt.Errorf("unexpected status code: %s", sanitizedDebuggingInfo(req, resp))
+		}
 
-	// If we're not supposed to read out the body, we have nothing further
-	// to do here.
-	if ptrToReturnObj == nil {
-		return nil
-	}
+		// If we're not supposed to read out the body, we have nothing further
+		// to do here.
+		if ptrToReturnObj == nil {
+			return nil
+		}
 
-	// Attempt to read out the body into the given return object.
-	if err := json.NewDecoder(resp.Body).Decode(ptrToReturnObj); err != nil {
-		return fmt.Errorf("unable to read as %T: %s", ptrToReturnObj, sanitizedDebuggingInfo(req, resp))
+		// Attempt to read out the body into the given return object.
+		if err := json.NewDecoder(resp.Body).Decode(ptrToReturnObj); err != nil {
+			return fmt.Errorf("unable to read as %T: %s", ptrToReturnObj, sanitizedDebuggingInfo(req, resp))
+		}
 	}
 	return nil
 }

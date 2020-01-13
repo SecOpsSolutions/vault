@@ -1,8 +1,5 @@
 package kubernetes
 
-// TODO make vault and drop this into a minikube vault and test it as a user would
-// TODO write unit tests
-
 import (
 	"fmt"
 
