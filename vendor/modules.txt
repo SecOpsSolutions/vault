@@ -461,6 +461,7 @@ github.com/hashicorp/vault/sdk/helper/identitytpl
 github.com/hashicorp/vault/sdk/helper/jsonutil
 github.com/hashicorp/vault/sdk/helper/kdf
 github.com/hashicorp/vault/sdk/helper/keysutil
+github.com/hashicorp/vault/sdk/helper/kubernetes
 github.com/hashicorp/vault/sdk/helper/ldaputil
 github.com/hashicorp/vault/sdk/helper/license
 github.com/hashicorp/vault/sdk/helper/locksutil
