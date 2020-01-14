@@ -45,7 +45,7 @@ func inClusterConfig() (*Config, error) {
 		Host:            scheme + net.JoinHostPort(host, port),
 		CACertPool:      pool,
 		BearerToken:     string(token),
-		BearerTokenFile: tokenFile, // TODO should I re-check this periodically? Or lazily on a bad response?
+		BearerTokenFile: tokenFile,
 	}, nil
 }
 
