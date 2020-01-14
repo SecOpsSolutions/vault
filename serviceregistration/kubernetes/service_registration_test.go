@@ -19,8 +19,8 @@ func TestServiceRegistration(t *testing.T) {
 	}
 	shutdownCh := make(chan struct{})
 	config := map[string]string{
-		"namespace": kubernetes.TestNamespace,
-		"pod_name":  kubernetes.TestPodname,
+		"namespace":    kubernetes.TestNamespace,
+		"service_name": kubernetes.TestServiceName,
 	}
 	logger := hclog.NewNullLogger()
 	state := &sr.State{

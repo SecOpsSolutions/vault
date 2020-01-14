@@ -31,17 +31,17 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, config map[string]string
 		namespace = defaultNamespace
 	}
 
-	podName := config["pod_name"]
-	if podName == "" {
-		podName = defaultVaultPodName
+	serviceName := config["service_name"]
+	if serviceName == "" {
+		serviceName = defaultVaultPodName
 	}
 
-	// Verify that the pod exists and our configuration looks good.
-	if err := client.GetPod(namespace, podName); err != nil {
+	// Verify that the service exists and our configuration looks good.
+	if err := client.GetService(namespace, serviceName); err != nil {
 		return nil, err
 	}
 
-	// Label the pod with our initial values.
+	// Label the service with our initial values.
 	tags := []*kubeHlpr.Tag{
 		{Key: labelVaultVersion, Value: state.VaultVersion},
 		{Key: labelActive, Value: toString(state.IsActive)},
@@ -49,14 +49,14 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, config map[string]string
 		{Key: labelPerfStandby, Value: toString(state.IsPerformanceStandby)},
 		{Key: labelInitialized, Value: toString(state.IsInitialized)},
 	}
-	if err := client.UpdatePodTags(namespace, podName, tags...); err != nil {
+	if err := client.UpdateServiceSelectors(namespace, serviceName, tags...); err != nil {
 		return nil, err
 	}
 	registration := &serviceRegistration{
-		logger:    logger,
-		podName:   podName,
-		namespace: namespace,
-		client:    client,
+		logger:      logger,
+		serviceName: serviceName,
+		namespace:   namespace,
+		client:      client,
 	}
 
 	// Run a background goroutine to leave labels in the final state we'd like
@@ -66,34 +66,34 @@ func NewServiceRegistration(shutdownCh <-chan struct{}, config map[string]string
 }
 
 type serviceRegistration struct {
-	logger             log.Logger
-	namespace, podName string
-	client             kubeHlpr.LightWeightClient
+	logger                 log.Logger
+	namespace, serviceName string
+	client                 kubeHlpr.LightWeightClient
 }
 
 func (r *serviceRegistration) NotifyActiveStateChange(isActive bool) error {
-	return r.client.UpdatePodTags(r.namespace, r.podName, &kubeHlpr.Tag{
+	return r.client.UpdateServiceSelectors(r.namespace, r.serviceName, &kubeHlpr.Tag{
 		Key:   labelActive,
 		Value: toString(isActive),
 	})
 }
 
 func (r *serviceRegistration) NotifySealedStateChange(isSealed bool) error {
-	return r.client.UpdatePodTags(r.namespace, r.podName, &kubeHlpr.Tag{
+	return r.client.UpdateServiceSelectors(r.namespace, r.serviceName, &kubeHlpr.Tag{
 		Key:   labelSealed,
 		Value: toString(isSealed),
 	})
 }
 
 func (r *serviceRegistration) NotifyPerformanceStandbyStateChange(isStandby bool) error {
-	return r.client.UpdatePodTags(r.namespace, r.podName, &kubeHlpr.Tag{
+	return r.client.UpdateServiceSelectors(r.namespace, r.serviceName, &kubeHlpr.Tag{
 		Key:   labelPerfStandby,
 		Value: toString(isStandby),
 	})
 }
 
 func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) error {
-	return r.client.UpdatePodTags(r.namespace, r.podName, &kubeHlpr.Tag{
+	return r.client.UpdateServiceSelectors(r.namespace, r.serviceName, &kubeHlpr.Tag{
 		Key:   labelInitialized,
 		Value: toString(isInitialized),
 	})
@@ -102,16 +102,16 @@ func (r *serviceRegistration) NotifyInitializedStateChange(isInitialized bool) e
 func (r *serviceRegistration) onShutdown(shutdownCh <-chan struct{}) {
 	<-shutdownCh
 
-	// Label the pod with the values we want to leave behind after shutdown.
+	// Label the service with the values we want to leave behind after shutdown.
 	tags := []*kubeHlpr.Tag{
 		{Key: labelActive, Value: toString(false)},
 		{Key: labelSealed, Value: toString(true)},
 		{Key: labelPerfStandby, Value: toString(false)},
 		{Key: labelInitialized, Value: toString(false)},
 	}
-	if err := r.client.UpdatePodTags(r.namespace, r.podName, tags...); err != nil {
+	if err := r.client.UpdateServiceSelectors(r.namespace, r.serviceName, tags...); err != nil {
 		if r.logger.IsWarn() {
-			r.logger.Warn(fmt.Sprintf("unable to set final status on pod name %q in namespace %q on shutdown: %s", r.podName, r.namespace, err))
+			r.logger.Warn(fmt.Sprintf("unable to set final status on service name %q in namespace %q on shutdown: %s", r.serviceName, r.namespace, err))
 		}
 		return
 	}

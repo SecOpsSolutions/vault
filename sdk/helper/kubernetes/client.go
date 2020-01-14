@@ -32,23 +32,23 @@ func NewLightWeightClient() (LightWeightClient, error) {
 }
 
 type LightWeightClient interface {
-	// GetPod merely verifies a pod's existence, returning an
+	// GetService merely verifies a service's existence, returning an
 	// error if the pod doesn't exist.
-	GetPod(namespace, podName string) error
+	GetService(namespace, serviceName string) error
 
-	// UpdatePodTags updates the pod's tags tags to the given ones,
+	// UpdateServiceSelectors updates the service's tags tags to the given ones,
 	// overwriting previous values for a given tag key. It does so
 	// non-destructively, or in other words, without tearing down
 	// the pod.
-	UpdatePodTags(namespace, podName string, tags ...*Tag) error
+	UpdateServiceSelectors(namespace, serviceName string, tags ...*Tag) error
 }
 
 type lightWeightClient struct {
 	config *Config
 }
 
-func (c *lightWeightClient) GetPod(namespace, podName string) error {
-	endpoint := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s", namespace, podName)
+func (c *lightWeightClient) GetService(namespace, serviceName string) error {
+	endpoint := fmt.Sprintf("/api/v1/namespaces/%s/services/%s", namespace, serviceName)
 	method := http.MethodGet
 
 	req, err := http.NewRequest(method, c.config.Host+endpoint, nil)
@@ -61,15 +61,15 @@ func (c *lightWeightClient) GetPod(namespace, podName string) error {
 	return nil
 }
 
-func (c *lightWeightClient) UpdatePodTags(namespace, podName string, tags ...*Tag) error {
-	endpoint := fmt.Sprintf("/api/v1/namespaces/%s/pods/%s", namespace, podName)
+func (c *lightWeightClient) UpdateServiceSelectors(namespace, serviceName string, tags ...*Tag) error {
+	endpoint := fmt.Sprintf("/api/v1/namespaces/%s/services/%s", namespace, serviceName)
 	method := http.MethodPatch
 
 	var patch []interface{}
 	for _, tag := range tags {
 		patch = append(patch, map[string]string{
 			"op":    "add",
-			"path":  "/metadata/labels/" + tag.Key,
+			"path":  "/spec/selector/" + tag.Key,
 			"value": tag.Value,
 		})
 	}

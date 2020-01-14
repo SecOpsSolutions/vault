@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	TestNamespace = "default"
-	TestPodname   = "shell-demo"
+	TestNamespace   = "default"
+	TestServiceName = "shell-demo"
 )
 
 // TestServer returns an http test server that can be used to test
@@ -73,7 +73,7 @@ func TestServer(t *testing.T) (currentLabels map[string]string, closeFunc func()
 
 	currentLabels = make(map[string]string)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		namespace, podName, err := parsePath(r.URL.Path)
+		namespace, serviceName, err := parsePath(r.URL.Path)
 		if err != nil {
 			w.WriteHeader(400)
 			w.Write([]byte(fmt.Sprintf("unable to parse %s: %s", r.URL.Path, err.Error())))
@@ -81,13 +81,13 @@ func TestServer(t *testing.T) (currentLabels map[string]string, closeFunc func()
 		}
 
 		switch {
-		case namespace != TestNamespace, podName != TestPodname:
+		case namespace != TestNamespace, serviceName != TestServiceName:
 			w.WriteHeader(404)
 			w.Write([]byte(notFoundResponse))
 			return
 		case r.Method == http.MethodGet:
 			w.WriteHeader(200)
-			w.Write([]byte(getPodResponse))
+			w.Write([]byte(getServiceResponse))
 			return
 		case r.Method == http.MethodPatch:
 			// Ignore errors in case the body is empty, in which case the resulting body bytes
@@ -100,12 +100,12 @@ func TestServer(t *testing.T) (currentLabels map[string]string, closeFunc func()
 			}
 			for _, patch := range patches {
 				patchMap := patch.(map[string]interface{})
-				tagKey := strings.TrimPrefix(patchMap["path"].(string), "/metadata/labels/")
+				tagKey := strings.TrimPrefix(patchMap["path"].(string), "/spec/selector/")
 				tagValue := patchMap["value"]
 				currentLabels[tagKey] = tagValue.(string)
 			}
 			w.WriteHeader(200)
-			w.Write([]byte(updatePodTagsResponse))
+			w.Write([]byte(updateServiceSelectorsResponse))
 			return
 		default:
 			w.WriteHeader(400)
@@ -137,18 +137,19 @@ func TestServer(t *testing.T) (currentLabels map[string]string, closeFunc func()
 }
 
 // The path should be formatted like this:
-// fmt.Sprintf("/api/v1/namespaces/%s/pods/%s", namespace, podName)
-func parsePath(urlPath string) (namespace, podName string, err error) {
+// fmt.Sprintf("/api/v1/namespaces/%s/services/%s", namespace, serviceName)
+func parsePath(urlPath string) (namespace, serviceName string, err error) {
 	original := urlPath
-	podName = path.Base(urlPath)
-	urlPath = strings.TrimSuffix(urlPath, "/pods/"+podName)
+	serviceName = path.Base(urlPath)
+	urlPath = strings.TrimSuffix(urlPath, "/services/"+serviceName)
 	namespace = path.Base(urlPath)
-	if original != fmt.Sprintf("/api/v1/namespaces/%s/pods/%s", namespace, podName) {
+	if original != fmt.Sprintf("/api/v1/namespaces/%s/services/%s", namespace, serviceName) {
 		return "", "", fmt.Errorf("received unexpected path: %s", original)
 	}
-	return namespace, podName, nil
+	return namespace, serviceName, nil
 }
 
+// TODO I need to update two of these sample responses.
 // These are examples captured from real life.
 const (
 	caCrt = `-----BEGIN CERTIFICATE-----
@@ -170,7 +171,7 @@ Q9IFGQFFF8jO18lbyWqnRBGXcS4/G7jQ3S7C121d14YLUeAYOM7pJykI1g4CLx9y
 vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
 -----END CERTIFICATE-----
 `
-	getPodResponse = `{
+	getServiceResponse = `{
   "kind": "Pod",
   "apiVersion": "v1",
   "metadata": {
@@ -304,8 +305,8 @@ vitin0L6nprauWkKO38XgM4T75qKZpqtiOcT
   "code": 404
 }
 `
-	token                 = `eyJhbGciOiJSUzI1NiIsImtpZCI6IjZVQU91ckJYcTZKRHQtWHpaOExib2EyUlFZQWZObms2d25mY3ZtVm1NNUUifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRlZmF1bHQtdG9rZW4tNWZqdDkiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGVmYXVsdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImY0NGUyMDIxLTU2YWItNDEzNC1hMjMxLTBlMDJmNjhmNzJhNiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmRlZmF1bHQifQ.hgMbuT0hlxG04fDvI_Iyxtbwc8M-i3q3K7CqIGC_jYSjVlyezHN_0BeIB3rE0_M2xvbIs6chsWFZVsK_8Pj6ho7VT0x5PWy5n6KsqTBz8LPpjWpsaxpYQos0RzgA3KLnuzZE8Cl-v-PwWQK57jgbS4AdlXujQXdtLXJNwNAKI0pvCASA6UXP55_X845EsJkyT1J-bURSS3Le3g9A4pDoQ_MUv7hqa-p7yQEtFfYCkq1KKrUJZMRjmS4qda1rg-Em-dw9RFvQtPodRYF0DKT7A7qgmLUfIkuky3NnsQtvaUo8ZVtUiwIEfRdqw1oQIY4CSYz-wUl2xZa7n2QQBROE7w`
-	updatePodTagsResponse = `{
+	token                          = `eyJhbGciOiJSUzI1NiIsImtpZCI6IjZVQU91ckJYcTZKRHQtWHpaOExib2EyUlFZQWZObms2d25mY3ZtVm1NNUUifQ.eyJpc3MiOiJrdWJlcm5ldGVzL3NlcnZpY2VhY2NvdW50Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9uYW1lc3BhY2UiOiJkZWZhdWx0Iiwia3ViZXJuZXRlcy5pby9zZXJ2aWNlYWNjb3VudC9zZWNyZXQubmFtZSI6ImRlZmF1bHQtdG9rZW4tNWZqdDkiLCJrdWJlcm5ldGVzLmlvL3NlcnZpY2VhY2NvdW50L3NlcnZpY2UtYWNjb3VudC5uYW1lIjoiZGVmYXVsdCIsImt1YmVybmV0ZXMuaW8vc2VydmljZWFjY291bnQvc2VydmljZS1hY2NvdW50LnVpZCI6ImY0NGUyMDIxLTU2YWItNDEzNC1hMjMxLTBlMDJmNjhmNzJhNiIsInN1YiI6InN5c3RlbTpzZXJ2aWNlYWNjb3VudDpkZWZhdWx0OmRlZmF1bHQifQ.hgMbuT0hlxG04fDvI_Iyxtbwc8M-i3q3K7CqIGC_jYSjVlyezHN_0BeIB3rE0_M2xvbIs6chsWFZVsK_8Pj6ho7VT0x5PWy5n6KsqTBz8LPpjWpsaxpYQos0RzgA3KLnuzZE8Cl-v-PwWQK57jgbS4AdlXujQXdtLXJNwNAKI0pvCASA6UXP55_X845EsJkyT1J-bURSS3Le3g9A4pDoQ_MUv7hqa-p7yQEtFfYCkq1KKrUJZMRjmS4qda1rg-Em-dw9RFvQtPodRYF0DKT7A7qgmLUfIkuky3NnsQtvaUo8ZVtUiwIEfRdqw1oQIY4CSYz-wUl2xZa7n2QQBROE7w`
+	updateServiceSelectorsResponse = `{
   "kind": "Pod",
   "apiVersion": "v1",
   "metadata": {

@@ -28,13 +28,13 @@ import (
 var callToMake string
 var tagsToAdd string
 var namespace string
-var podName string
+var serviceName string
 
 func init() {
-	flag.StringVar(&callToMake, "call", "", `the call to make: 'get-pod' or 'update-pod-tags'`)
-	flag.StringVar(&tagsToAdd, "tags", "", `if call is "update-pod-tags", that tags to update like so: "fizz:buzz,foo:bar"`)
+	flag.StringVar(&callToMake, "call", "", `the call to make: 'get-service' or 'update-service-selectors'`)
+	flag.StringVar(&tagsToAdd, "tags", "", `if call is "update-service-selectors", that tags to update like so: "fizz:buzz,foo:bar"`)
 	flag.StringVar(&namespace, "namespace", "", "the namespace to use")
-	flag.StringVar(&podName, "pod-name", "", "the pod name to use")
+	flag.StringVar(&serviceName, "service-name", "", "the service name to use")
 }
 
 func main() {
@@ -46,12 +46,12 @@ func main() {
 	}
 
 	switch callToMake {
-	case "get-pod":
-		if err := client.GetPod(namespace, podName); err != nil {
+	case "get-service":
+		if err := client.GetService(namespace, serviceName); err != nil {
 			panic(err)
 		}
 		return
-	case "update-pod-tags":
+	case "update-service-selectors":
 		tagPairs := strings.Split(tagsToAdd, ",")
 		var tags []*kubernetes.Tag
 		for _, tagPair := range tagPairs {
@@ -64,7 +64,7 @@ func main() {
 				Value: fields[1],
 			})
 		}
-		if err := client.UpdatePodTags(namespace, podName, tags...); err != nil {
+		if err := client.UpdateServiceSelectors(namespace, serviceName, tags...); err != nil {
 			panic(err)
 		}
 		return

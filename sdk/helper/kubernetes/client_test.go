@@ -16,10 +16,10 @@ func TestClient(t *testing.T) {
 		client:        client,
 		currentLabels: currentLabels,
 	}
-	e.TestGetPod(t)
-	e.TestGetPodNotFound(t)
-	e.TestUpdatePodTags(t)
-	e.TestUpdatePodTagsNotFound(t)
+	e.TestGetService(t)
+	e.TestGetServiceNotFound(t)
+	e.TestUpdateServiceSelectors(t)
+	e.TestUpdateServiceSelectorsNotFound(t)
 }
 
 type env struct {
@@ -27,24 +27,24 @@ type env struct {
 	currentLabels map[string]string
 }
 
-func (e *env) TestGetPod(t *testing.T) {
-	if err := e.client.GetPod(TestNamespace, TestPodname); err != nil {
+func (e *env) TestGetService(t *testing.T) {
+	if err := e.client.GetService(TestNamespace, TestServiceName); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func (e *env) TestGetPodNotFound(t *testing.T) {
-	err := e.client.GetPod(TestNamespace, "no-exist")
+func (e *env) TestGetServiceNotFound(t *testing.T) {
+	err := e.client.GetService(TestNamespace, "no-exist")
 	if err == nil {
-		t.Fatal("expected error because pod is unfound")
+		t.Fatal("expected error because service is unfound")
 	}
 	if err != ErrNotFound {
 		t.Fatalf("expected %q but received %q", ErrNotFound, err)
 	}
 }
 
-func (e *env) TestUpdatePodTags(t *testing.T) {
-	if err := e.client.UpdatePodTags(TestNamespace, TestPodname, &Tag{
+func (e *env) TestUpdateServiceSelectors(t *testing.T) {
+	if err := e.client.UpdateServiceSelectors(TestNamespace, TestServiceName, &Tag{
 		Key:   "fizz",
 		Value: "buzz",
 	}); err != nil {
@@ -58,13 +58,13 @@ func (e *env) TestUpdatePodTags(t *testing.T) {
 	}
 }
 
-func (e *env) TestUpdatePodTagsNotFound(t *testing.T) {
-	err := e.client.UpdatePodTags(TestNamespace, "no-exist", &Tag{
+func (e *env) TestUpdateServiceSelectorsNotFound(t *testing.T) {
+	err := e.client.UpdateServiceSelectors(TestNamespace, "no-exist", &Tag{
 		Key:   "fizz",
 		Value: "buzz",
 	})
 	if err == nil {
-		t.Fatal("expected error because pod is unfound")
+		t.Fatal("expected error because service is unfound")
 	}
 	if err != ErrNotFound {
 		t.Fatalf("expected %q but received %q", ErrNotFound, err)
