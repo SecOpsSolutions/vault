@@ -14,8 +14,8 @@ package main
 // https://github.com/fabric8io/fabric8/issues/6840#issuecomment-307560275
 //
 // Example calls:
-// 		./kubeclient -call='get-pod' -namespace='default' -pod-name='shell-demo'
-// 		./kubeclient -call='update-pod-tags' -namespace='default' -pod-name='shell-demo' -tags='fizz:buzz,foo:bar'
+// 		./kubeclient -call='get-service' -namespace='default' -service-name='shell-demo'
+// 		./kubeclient -call='update-service-tags' -namespace='default' -service-name='shell-demo' -selectors='fizz:buzz,foo:bar'
 
 import (
 	"flag"
@@ -26,13 +26,13 @@ import (
 )
 
 var callToMake string
-var tagsToAdd string
+var selectorsToAdd string
 var namespace string
 var serviceName string
 
 func init() {
 	flag.StringVar(&callToMake, "call", "", `the call to make: 'get-service' or 'update-service-selectors'`)
-	flag.StringVar(&tagsToAdd, "tags", "", `if call is "update-service-selectors", that tags to update like so: "fizz:buzz,foo:bar"`)
+	flag.StringVar(&selectorsToAdd, "selectors", "", `if call is "update-service-selectors", that selectors to update like so: "fizz:buzz,foo:bar"`)
 	flag.StringVar(&namespace, "namespace", "", "the namespace to use")
 	flag.StringVar(&serviceName, "service-name", "", "the service name to use")
 }
@@ -52,19 +52,19 @@ func main() {
 		}
 		return
 	case "update-service-selectors":
-		tagPairs := strings.Split(tagsToAdd, ",")
-		var tags []*kubernetes.Tag
+		tagPairs := strings.Split(selectorsToAdd, ",")
+		var selectors []*kubernetes.Tag
 		for _, tagPair := range tagPairs {
 			fields := strings.Split(tagPair, ":")
 			if len(fields) != 2 {
-				panic(fmt.Errorf("unable to split %s from tags provided of %s", fields, tagsToAdd))
+				panic(fmt.Errorf("unable to split %s from selectors provided of %s", fields, selectorsToAdd))
 			}
-			tags = append(tags, &kubernetes.Tag{
+			selectors = append(selectors, &kubernetes.Tag{
 				Key:   fields[0],
 				Value: fields[1],
 			})
 		}
-		if err := client.UpdateServiceSelectors(namespace, serviceName, tags...); err != nil {
+		if err := client.UpdateServiceSelectors(namespace, serviceName, selectors...); err != nil {
 			panic(err)
 		}
 		return

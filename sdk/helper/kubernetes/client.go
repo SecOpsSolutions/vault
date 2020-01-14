@@ -17,7 +17,7 @@ var (
 	ErrNotInCluster = errors.New("unable to load in-cluster configuration, KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be defined")
 )
 
-type Tag struct {
+type Selector struct {
 	Key, Value string
 }
 
@@ -33,14 +33,14 @@ func NewLightWeightClient() (LightWeightClient, error) {
 
 type LightWeightClient interface {
 	// GetService merely verifies a service's existence, returning an
-	// error if the pod doesn't exist.
+	// error if the service doesn't exist.
 	GetService(namespace, serviceName string) error
 
-	// UpdateServiceSelectors updates the service's tags tags to the given ones,
-	// overwriting previous values for a given tag key. It does so
+	// UpdateServiceSelectors updates the service's selectors to the given ones,
+	// overwriting previous values for a given selector key. It does so
 	// non-destructively, or in other words, without tearing down
-	// the pod.
-	UpdateServiceSelectors(namespace, serviceName string, tags ...*Tag) error
+	// the service.
+	UpdateServiceSelectors(namespace, serviceName string, selectors ...*Selector) error
 }
 
 type lightWeightClient struct {
@@ -61,16 +61,16 @@ func (c *lightWeightClient) GetService(namespace, serviceName string) error {
 	return nil
 }
 
-func (c *lightWeightClient) UpdateServiceSelectors(namespace, serviceName string, tags ...*Tag) error {
+func (c *lightWeightClient) UpdateServiceSelectors(namespace, serviceName string, selectors ...*Selector) error {
 	endpoint := fmt.Sprintf("/api/v1/namespaces/%s/services/%s", namespace, serviceName)
 	method := http.MethodPatch
 
 	var patch []interface{}
-	for _, tag := range tags {
+	for _, selector := range selectors {
 		patch = append(patch, map[string]string{
 			"op":    "add",
-			"path":  "/spec/selector/" + tag.Key,
-			"value": tag.Value,
+			"path":  "/spec/selector/" + selector.Key,
+			"value": selector.Value,
 		})
 	}
 	body, err := json.Marshal(patch)

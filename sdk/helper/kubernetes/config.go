@@ -23,8 +23,8 @@ var (
 )
 
 // inClusterConfig returns a config object which uses the service account
-// kubernetes gives to pods. It's intended for clients that expect to be
-// running inside a pod running on kubernetes. It will return ErrNotInCluster
+// kubernetes gives to services. It's intended for clients that expect to be
+// running inside a service running on kubernetes. It will return ErrNotInCluster
 // if called from a process not running in a kubernetes environment.
 func inClusterConfig() (*Config, error) {
 	host, port := os.Getenv(EnvVarKubernetesServiceHost), os.Getenv(EnvVarKubernetesServicePort)

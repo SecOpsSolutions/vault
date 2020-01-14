@@ -44,7 +44,7 @@ func (e *env) TestGetServiceNotFound(t *testing.T) {
 }
 
 func (e *env) TestUpdateServiceSelectors(t *testing.T) {
-	if err := e.client.UpdateServiceSelectors(TestNamespace, TestServiceName, &Tag{
+	if err := e.client.UpdateServiceSelectors(TestNamespace, TestServiceName, &Selector{
 		Key:   "fizz",
 		Value: "buzz",
 	}); err != nil {
@@ -59,7 +59,7 @@ func (e *env) TestUpdateServiceSelectors(t *testing.T) {
 }
 
 func (e *env) TestUpdateServiceSelectorsNotFound(t *testing.T) {
-	err := e.client.UpdateServiceSelectors(TestNamespace, "no-exist", &Tag{
+	err := e.client.UpdateServiceSelectors(TestNamespace, "no-exist", &Selector{
 		Key:   "fizz",
 		Value: "buzz",
 	})
