@@ -53,13 +53,13 @@ func main() {
 		return
 	case "update-service-selectors":
 		tagPairs := strings.Split(selectorsToAdd, ",")
-		var selectors []*kubernetes.Tag
+		var selectors []*kubernetes.Selector
 		for _, tagPair := range tagPairs {
 			fields := strings.Split(tagPair, ":")
 			if len(fields) != 2 {
 				panic(fmt.Errorf("unable to split %s from selectors provided of %s", fields, selectorsToAdd))
 			}
-			selectors = append(selectors, &kubernetes.Tag{
+			selectors = append(selectors, &kubernetes.Selector{
 				Key:   fields[0],
 				Value: fields[1],
 			})
